@@ -1,0 +1,101 @@
+- hosts: localhost
+  become_method: sudo
+  become: true
+
+  vars_files:
+    - secret.yml
+
+  # environment:
+  #   http_proxy: "{{ http_proxy }}"
+  #   https_proxy: "{{ https_proxy }}"
+
+  tasks:
+    # Update the package cache
+    - name: apt update
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+
+    - name: yum update
+      yum:
+        name: '*'
+        state: latest
+      when: ansible_os_family == 'RedHat'
+
+    # Update the CA trust
+    - name: update ca trust
+      command: update-ca-certificates
+      when: ansible_os_family == 'Debian'
+
+    - name: update ca trust
+      command: /bin/update-ca-trust
+      when: ansible_os_family == 'RedHat'
+
+    # Install apt dependencies
+    - name: Install apt dependencies
+      apt:
+        name: "{{ item }}"
+        state: present
+      when: ansible_os_family == 'Debian'
+      loop:
+        # - curl
+        - ca-certificates
+        - postfix
+        - openssh-server
+        - tzdata
+        - perl
+
+    - name: Install yum dependencies
+      yum:
+        name: "{{ item }}"
+        state: present
+      when: ansible_os_family == 'RedHat'
+      loop:
+        # - curl
+        - ca-certificates
+        - postfix
+        - openssh-server
+        - tzdata
+        - perl
+
+    # Add GitLab package repository
+    - name: Add GitLab package repository
+      get_url:
+        url:  https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh
+        dest: /root/script.deb.sh
+        mode: 0755
+      when: ansible_os_family == 'Debian'
+
+    - name: Add GitLab package repository
+      get_url:
+        url: https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.rpm.sh
+        dest: /root/script.rpm.sh
+        mode: 0755
+      when: ansible_os_family == 'RedHat'
+
+    - name: Run GitLab package repository script
+      command: /root/script.deb.sh
+      when: ansible_os_family == 'Debian'
+
+    - name: Run GitLab package repository script
+      command: /root/script.rpm.sh
+      when: ansible_os_family == 'RedHat'
+
+    # Install GitLab
+    - name: Intall GitLab
+      apt:
+        name: gitlab-ee
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Intall GitLab
+      yum:
+        name: gitlab-ee
+        state: present
+      when: ansible_os_family == 'RedHat'
+      download_only: no
+
+    # Configure GitLab
+    - name: Run GitLab reconfigure
+      command: gitlab-ctl reconfigure

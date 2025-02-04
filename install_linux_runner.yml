@@ -1,0 +1,55 @@
+- hosts: localhost
+  become_method: sudo
+  become: true
+
+  vars_files:
+    - secret.yml
+
+  tasks:
+    - name: apt update
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+
+    - name: yum update
+      yum:
+        name: '*'
+        state: latest
+      when: ansible_os_family == 'RedHat'
+
+    - name: update ca trust
+      command: update-ca-certificates
+      when: ansible_os_family == 'Debian'
+
+    - name: update ca trust
+      command: /bin/update-ca-trust
+      when: ansible_os_family == 'RedHat'
+
+    - name: Add GitLab Runner package repository
+      get_url:
+        url: https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh
+        dest: /tmp/script.rpm.sh
+        mode: 0755
+      when: ansible_os_family == 'RedHat'
+
+    - name: Add GitLab Runner package repository
+      get_url:
+        url: https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh
+        dest: /tmp/script.deb.sh
+        mode: 0755
+      when: ansible_os_family == 'Debian'
+
+    - name: Run GitLab Runner package repository script
+      command: /tmp/script.rpm.sh
+      when: ansible_os_family == 'RedHat'
+
+    - name: Run GitLab Runner package repository script
+      command: /tmp/script.deb.sh
+      when: ansible_os_family == 'Debian'
+
+    - name: Install GitLab Runner
+      yum:
+        name: gitlab-runner
+        state: present
+      when: ansible_os_family == 'RedHat'

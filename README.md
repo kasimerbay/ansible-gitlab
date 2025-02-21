@@ -16,7 +16,9 @@ Role Variables
 gitlab_version: "{{ gitlab_version }}"
 
 gitlab_external_url: '{{ gitlab_external_url }}'
+
 initial_root_password: '{{ initial_root_password }}'
+
 initial_shared_runners_registration_token: '{{ initial_shared_runners_registration_token }}'
 
 

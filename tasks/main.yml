@@ -1,0 +1,62 @@
+---
+# Install CA Certs here
+- name: Copy Server Certs into the system
+  ansible.builtin.templates:
+    src: "{{ item }}"
+    dest: "/etc/pki/ca-trust/source/anchors/{{ item }}"
+    mode: 0644
+  loop:
+    - ca.crt
+    - ca.pem
+
+- name: update ca trust
+  command: /bin/update-ca-trust
+
+- name: Install Firewalld Service
+  ansible.builtin.package:
+    name: firewalld
+    state: present
+
+- name: Start Firewalld Service
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: Open http and https
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+  loop:
+    - firewall-cmd --permanent --add-service=http
+    - firewall-cmd --permanent --add-service=https
+    - firewall-cmd --reload
+
+- name: Install yum dependencies
+  ansible.builtin.yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    # - curl
+    - ca-certificates
+    - tzdata
+    - perl
+    - yum-utils
+
+- name: Copy script to server
+  ansible.builtin.template:
+    src: script.rpm.sh
+    dest: /root/script.rpm.sh
+    mode: 0755
+
+- name: Check Repo Script Exists
+  ansible.builtin.stat:
+    path: /root/script.rpm.sh
+
+- name: Add GitLab package repository
+  command: /root/script.rpm.sh
+
+# Install GitLab
+- name: Install GitLab
+  ansible.builtin.yum:
+    name: gitlab-ee-{{ gitlab_version }}
+    state: installed
